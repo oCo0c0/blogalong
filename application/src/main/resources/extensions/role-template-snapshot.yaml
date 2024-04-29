@@ -1,0 +1,25 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-snapshots
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+  annotations:
+    rbac.authorization.blog.run/dependencies: "[ \"role-template-view-snapshots\" ]"
+rules:
+  - apiGroups: [ "content.blog.run" ]
+    resources: [ "snapshots" ]
+    verbs: [ "*" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-view-snapshots
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+rules:
+  - apiGroups: [ "content.blog.run" ]
+    resources: [ "snapshots" ]
+    verbs: [ "get", "list" ]

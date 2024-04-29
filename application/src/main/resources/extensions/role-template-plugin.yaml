@@ -1,0 +1,45 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-plugins
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/dependencies: |
+      [ "role-template-view-plugins" ]
+    rbac.authorization.blog.run/module: "Plugins Management"
+    rbac.authorization.blog.run/display-name: "Plugin Manage"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:plugins:manage"]
+rules:
+  - apiGroups: [ "plugin.blog.run" ]
+    resources: [ "plugins" ]
+    verbs: [ "create", "patch", "update", "delete", "deletecollection" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "plugins/upgrade", "plugins/resetconfig", "plugins/config", "plugins/reload",
+                 "plugins/install-from-uri", "plugins/upgrade-from-uri", "plugins/plugin-state" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "plugin-presets" ]
+    verbs: [ "list" ]
+  - nonResourceURLs: [ "/apis/api.console.blog.run/v1alpha1/plugins/*" ]
+    verbs: [ "create" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-view-plugins
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/module: "Plugins Management"
+    rbac.authorization.blog.run/display-name: "Plugin View"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:plugins:view"]
+rules:
+  - apiGroups: [ "plugin.blog.run" ]
+    resources: [ "plugins" ]
+    verbs: [ "get", "list" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "plugins", "plugins/setting", "plugins/config" ]
+    verbs: [ "get", "list" ]

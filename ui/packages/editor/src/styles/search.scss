@@ -1,0 +1,11 @@
+.blog-rich-text-editor {
+  .ProseMirror {
+    .search-result {
+      background-color: #ffd90050;
+
+      &.search-result-current {
+        background-color: #ffd900;
+      }
+    }
+  }
+}

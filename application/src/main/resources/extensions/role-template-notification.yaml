@@ -1,0 +1,21 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-notifier-config
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+  annotations:
+    rbac.authorization.blog.run/module: "Notification Configuration"
+    rbac.authorization.blog.run/display-name: "Configure Notifier"
+rules:
+  - apiGroups: [ "notification.blog.run" ]
+    resources: [ "notifierDescriptors" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "notifiers/sender-config" ]
+    verbs: [ "get", "update" ]
+  - apiGroups: [ "console.api.notification.blog.run" ]
+    resources: [ "notifiers/verify-connection" ]
+    resourceNames: [ "default-email-notifier" ]
+    verbs: [ "create" ]

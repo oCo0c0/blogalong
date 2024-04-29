@@ -1,0 +1,48 @@
+# TODO Remove the username-password-authenticator in the future.
+apiVersion: plugin.blog.run/v1alpha1
+kind: ExtensionDefinition
+metadata:
+  name: username-password-authenticator
+  labels:
+    auth.blog.run/extension-point-name: "additional-webfilter"
+  deletionTimestamp: 2024-02-18T08:27:41.257531Z
+spec:
+  className: run.blog.app.security.authentication.login.UsernamePasswordAuthenticator
+  extensionPointName: additional-webfilter
+  displayName: "UsernamePasswordAuthenticator"
+  description: "Authenticates a user by username and password."
+---
+apiVersion: plugin.blog.run/v1alpha1
+kind: ExtensionDefinition
+metadata:
+  name: username-password-logout-handler
+  labels:
+    auth.blog.run/extension-point-name: "additional-webfilter"
+spec:
+  className: run.blog.app.security.authentication.login.UsernamePasswordLogoutHandler
+  extensionPointName: additional-webfilter
+  displayName: "UsernamePasswordLogoutHandler"
+  description: "Logout handler for username and password authentication."
+---
+apiVersion: plugin.blog.run/v1alpha1
+kind: ExtensionDefinition
+metadata:
+  name: delegating-logout-page-generating-webfilter
+  labels:
+    auth.blog.run/extension-point-name: "additional-webfilter"
+spec:
+  className: run.blog.app.security.authentication.login.DelegatingLogoutPageGeneratingWebFilter
+  extensionPointName: additional-webfilter
+  displayName: "DelegatingLogoutPageGeneratingWebFilter"
+  description: "Generates a default log out page."
+
+---
+apiVersion: plugin.blog.run/v1alpha1
+kind: ExtensionDefinition
+metadata:
+  name: blog-email-notifier
+spec:
+  className: run.blog.app.notification.EmailNotifier
+  extensionPointName: reactive-notifier
+  displayName: "EmailNotifier"
+  description: "Support sending notifications to users via email"

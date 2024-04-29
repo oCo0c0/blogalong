@@ -1,0 +1,152 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: authenticated
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+  annotations:
+    rbac.authorization.blog.run/dependencies: |
+      [ 
+        "role-template-own-user-info",
+        "role-template-own-permissions",
+        "role-template-change-own-password",
+        "role-template-stats",
+        "role-template-annotation-setting",
+        "role-template-manage-own-pat",
+        "role-template-manage-own-authentications",
+        "role-template-user-notification"
+      ]
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "configmaps" ]
+    resourceNames: [ "system-states" ]
+    verbs: [ "get" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "auth-providers" ]
+    verbs: [ "list" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "plugins/bundle.js", "plugins/bundle.css" ]
+    resourceNames: [ "-" ]
+    verbs: [ "get" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-own-user-info
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+rules:
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "users" ]
+    resourceNames: [ "-" ]
+    verbs: [ "get", "update" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "users/avatar" ]
+    resourceNames: [ "-" ]
+    verbs: [ "create", "delete" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "users/send-email-verification-code", "users/verify-email" ]
+    resourceNames: [ "-" ]
+    verbs: [ "create" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-own-permissions
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+rules:
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "users/permissions" ]
+    resourceNames: [ "-" ]
+    verbs: [ "list", "get" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-change-own-password
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+rules:
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "users/password" ]
+    resourceNames: [ "-" ]
+    verbs: [ "update" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-stats
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+rules:
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "stats" ]
+    verbs: [ "get", "list" ]
+
+---
+apiVersion: v1alpha1
+kind: Role
+metadata:
+  name: role-template-annotation-setting
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "annotationsettings" ]
+    verbs: [ "get", "list" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-own-pat
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+rules:
+  - apiGroups: [ "api.security.blog.run" ]
+    resources: [ "personalaccesstokens" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "api.security.blog.run" ]
+    resources: [ "personalaccesstokens/actions" ]
+    verbs: [ "update" ]
+
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-own-authentications
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+rules:
+  - apiGroups: [ "api.security.blog.run" ]
+    resources: [ "authentications", "authentications/totp", "authentications/settings" ]
+    verbs: [ "*" ]
+---
+apiVersion: v1alpha1
+kind: Role
+metadata:
+  name: role-template-user-notification
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+rules:
+  - apiGroups: [ "api.notification.blog.run" ]
+    resources: [ "notifications" ]
+    verbs: [ "get", "list", "delete" ]
+  - apiGroups: [ "api.notification.blog.run" ]
+    resources: [ "notifications/mark-as-read", "notifications/mark-specified-as-read" ]
+    verbs: [ "update" ]
+  - apiGroups: [ "api.notification.blog.run" ]
+    resources: [ "notifiers/receiver-config" ]
+    verbs: [ "get", "update" ]
+  - apiGroups: [ "api.notification.blog.run" ]
+    resources: [ "notification-preferences" ]
+    verbs: [ "create", "list" ]

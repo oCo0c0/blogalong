@@ -1,0 +1,44 @@
+{
+  "name": "@blogalong/ui-plugin-bundler-kit",
+  "version": "2.14.0",
+  "homepage": "https://github.com/oCo0c0/blogalong/tree/main/ui/packages/ui-plugin-bundler-kit#readme",
+  "bugs": {
+    "url": "https://github.com/oCo0c0/blogalong/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oCo0c0/blogalong.git",
+    "directory": "ui/packages/ui-plugin-bundler-kit"
+  },
+  "license": "GPL-3.0",
+  "author": "@blogalong",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "unbuild",
+    "dev": "unbuild --stub",
+    "prepublishOnly": "pnpm run build"
+  },
+  "devDependencies": {
+    "@blogalong/api-client": "workspace:*",
+    "@types/js-yaml": "^4.0.9",
+    "js-yaml": "^4.1.0",
+    "unbuild": "^0.7.6"
+  },
+  "peerDependencies": {
+    "vite": "^4.0.0 || ^5.0.0"
+  },
+  "engines": {
+    "node": "^18.0.0 || >=20.0.0"
+  }
+}

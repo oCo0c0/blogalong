@@ -1,0 +1,18 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-migration
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/module: "Migration Management"
+    rbac.authorization.blog.run/display-name: "Migration Manage"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:migrations:manage"]
+rules:
+  - apiGroups: ["api.console.migration.blog.run"]
+    resources: ["restorations"]
+    verbs: ["create"]
+  - apiGroups: ["migration.blog.run"]
+    resources: ["backups"]
+    verbs: ["list", "get", "create", "update", "delete"]

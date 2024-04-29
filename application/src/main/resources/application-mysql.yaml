@@ -1,0 +1,9 @@
+spring:
+  r2dbc:
+    url: r2dbc:pool:mysql://3.tcp.vip.cpolar.cn:12272/blogalong_dev
+    username: along
+    password: 010701kk
+  sql:
+    init:
+      mode: always
+      platform: mysql

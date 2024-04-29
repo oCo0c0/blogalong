@@ -1,0 +1,39 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-singlepages
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/dependencies: "[ \"role-template-view-singlepages\", \"role-template-manage-snapshots\" ]"
+    rbac.authorization.blog.run/module: "SinglePages Management"
+    rbac.authorization.blog.run/display-name: "SinglePage Manage"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:singlepages:manage"]
+rules:
+  - apiGroups: [ "content.blog.run" ]
+    resources: [ "singlepages" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "singlepages", "singlepages/publish", "singlepages/content" ]
+    verbs: [ "create", "patch", "update", "delete", "deletecollection" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-view-singlepages
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/dependencies: "[ \"role-template-view-snapshots\" ]"
+    rbac.authorization.blog.run/module: "SinglePages Management"
+    rbac.authorization.blog.run/display-name: "SinglePage View"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:singlepages:view"]
+rules:
+  - apiGroups: [ "content.blog.run" ]
+    resources: [ "singlepages" ]
+    verbs: [ "get", "list" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "singlepages", "singlepages/head-content", "singlepages/release-content" ]
+    verbs: [ "get", "list" ]

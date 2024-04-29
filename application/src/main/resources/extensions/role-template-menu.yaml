@@ -1,0 +1,32 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-menus
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/dependencies: "[ \"role-template-view-menus\" ]"
+    rbac.authorization.blog.run/module: "Menus Management"
+    rbac.authorization.blog.run/display-name: "Menu Manage"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:menus:manage"]
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "menus", "menuitems" ]
+    verbs: [ "*" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-view-menus
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/module: "Menus Management"
+    rbac.authorization.blog.run/display-name: "Menu View"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:menus:view"]
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "menus", "menuitems" ]
+    verbs: [ "get", "list" ]

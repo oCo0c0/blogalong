@@ -1,0 +1,38 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-comments
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/dependencies: "[ \"role-template-view-comments\" ]"
+    rbac.authorization.blog.run/module: "Comments Management"
+    rbac.authorization.blog.run/display-name: "Comment Manage"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:comments:manage"]
+rules:
+  - apiGroups: [ "content.blog.run" ]
+    resources: [ "comments", "replies" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "comments", "comments/reply", "replies" ]
+    verbs: [ "*" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-view-comments
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/module: "Comments Management"
+    rbac.authorization.blog.run/display-name: "Comment View"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:comments:view"]
+rules:
+  - apiGroups: [ "content.blog.run" ]
+    resources: [ "comments", "replies" ]
+    verbs: [ "get", "list" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "comments", "comments/reply", "replies" ]
+    verbs: [ "get", "list" ]

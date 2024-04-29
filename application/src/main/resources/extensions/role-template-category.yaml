@@ -1,0 +1,30 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-categories
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+  annotations:
+    rbac.authorization.blog.run/dependencies: "[ \"role-template-view-categories\" ]"
+    rbac.authorization.blog.run/ui-permissions: |
+      [ "system:categories:manage", "uc:categories:manage" ]
+rules:
+  - apiGroups: [ "content.blog.run" ]
+    resources: [ "categories" ]
+    verbs: [ "*" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-view-categories
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+  annotations:
+    rbac.authorization.blog.run/ui-permissions: |
+      [ "system:categories:view", "uc:categories:view" ]
+rules:
+  - apiGroups: [ "content.blog.run" ]
+    resources: [ "categories" ]
+    verbs: [ "get", "list" ]

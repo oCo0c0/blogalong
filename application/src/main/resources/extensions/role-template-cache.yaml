@@ -1,0 +1,15 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-cache
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/module: "Cache Management"
+    rbac.authorization.blog.run/display-name: "Cache Manage"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:caches:manage"]
+rules:
+  - apiGroups: ["api.console.blog.run"]
+    resources: ["caches"]
+    verbs: ["delete"]

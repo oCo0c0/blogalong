@@ -1,0 +1,353 @@
+package run.blog.app.core.extension.reconciler;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
+import static run.blog.app.extension.ExtensionUtil.addFinalizers;
+import static run.blog.app.extension.ExtensionUtil.removeFinalizers;
+import static run.blog.app.extension.index.query.QueryFactory.equal;
+
+import com.google.common.hash.Hashing;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import lombok.AllArgsConstructor;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.jsoup.Jsoup;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Component;
+import run.blog.app.content.ContentWrapper;
+import run.blog.app.content.NotificationReasonConst;
+import run.blog.app.content.PostService;
+import run.blog.app.content.comment.CommentService;
+import run.blog.app.content.permalinks.PostPermalinkPolicy;
+import run.blog.app.core.extension.content.Constant;
+import run.blog.app.core.extension.content.Post;
+import run.blog.app.core.extension.content.Post.PostPhase;
+import run.blog.app.core.extension.content.Post.VisibleEnum;
+import run.blog.app.core.extension.content.Snapshot;
+import run.blog.app.core.extension.notification.Subscription;
+import run.blog.app.event.post.PostDeletedEvent;
+import run.blog.app.event.post.PostPublishedEvent;
+import run.blog.app.event.post.PostUnpublishedEvent;
+import run.blog.app.event.post.PostUpdatedEvent;
+import run.blog.app.event.post.PostVisibleChangedEvent;
+import run.blog.app.extension.DefaultExtensionMatcher;
+import run.blog.app.extension.ExtensionClient;
+import run.blog.app.extension.ExtensionOperator;
+import run.blog.app.extension.ListOptions;
+import run.blog.app.extension.Ref;
+import run.blog.app.extension.controller.Controller;
+import run.blog.app.extension.controller.ControllerBuilder;
+import run.blog.app.extension.controller.Reconciler;
+import run.blog.app.extension.index.query.QueryFactory;
+import run.blog.app.extension.router.selector.FieldSelector;
+import run.blog.app.infra.Condition;
+import run.blog.app.infra.ConditionStatus;
+import run.blog.app.infra.utils.BlogUtils;
+import run.blog.app.metrics.CounterService;
+import run.blog.app.metrics.MeterUtils;
+import run.blog.app.notification.NotificationCenter;
+
+/**
+ * <p>Reconciler for {@link Post}.</p>
+ *
+ * <p>things to do:</p>
+ * <ul>
+ * 1. generate permalink
+ * 2. generate excerpt if auto generate is enabled
+ * </ul>
+ *
+ * @author guqing
+ * @since 2.0.0
+ */
+@AllArgsConstructor
+@Component
+public class PostReconciler implements Reconciler<Reconciler.Request> {
+    private static final String FINALIZER_NAME = "post-protection";
+    private final ExtensionClient client;
+    private final PostService postService;
+    private final PostPermalinkPolicy postPermalinkPolicy;
+    private final CounterService counterService;
+    private final CommentService commentService;
+
+    private final ApplicationEventPublisher eventPublisher;
+    private final NotificationCenter notificationCenter;
+
+    @Override
+    public Result reconcile(Request request) {
+        var events = new HashSet<ApplicationEvent>();
+        client.fetch(Post.class, request.name())
+            .ifPresent(post -> {
+                if (ExtensionOperator.isDeleted(post)) {
+                    removeFinalizers(post.getMetadata(), Set.of(FINALIZER_NAME));
+                    unPublishPost(post, events);
+                    events.add(new PostDeletedEvent(this, post));
+                    cleanUpResources(post);
+                    // update post to be able to be collected by gc collector.
+                    client.update(post);
+                    // fire event after updating post
+                    events.forEach(eventPublisher::publishEvent);
+                    return;
+                }
+
+                addFinalizers(post.getMetadata(), Set.of(FINALIZER_NAME));
+
+                subscribeNewCommentNotification(post);
+
+                var labels = post.getMetadata().getLabels();
+                if (labels == null) {
+                    labels = new HashMap<>();
+                    post.getMetadata().setLabels(labels);
+                }
+
+                var annotations = post.getMetadata().getAnnotations();
+                if (annotations == null) {
+                    annotations = new HashMap<>();
+                    post.getMetadata().setAnnotations(annotations);
+                }
+
+                if (!annotations.containsKey(Post.PUBLISHED_LABEL)) {
+                    labels.put(Post.PUBLISHED_LABEL, BooleanUtils.FALSE);
+                }
+
+                var status = post.getStatus();
+                if (status == null) {
+                    status = new Post.PostStatus();
+                    post.setStatus(status);
+                }
+
+                if (post.isPublished() && post.getSpec().getPublishTime() == null) {
+                    post.getSpec().setPublishTime(Instant.now());
+                }
+
+                // calculate the sha256sum
+                var configSha256sum = Hashing.sha256().hashString(post.getSpec().toString(), UTF_8)
+                    .toString();
+
+                var oldConfigChecksum = annotations.get(Constant.CHECKSUM_CONFIG_ANNO);
+                if (!Objects.equals(oldConfigChecksum, configSha256sum)) {
+                    // if the checksum doesn't match
+                    events.add(new PostUpdatedEvent(this, post.getMetadata().getName()));
+                    annotations.put(Constant.CHECKSUM_CONFIG_ANNO, configSha256sum);
+                }
+
+                var expectDelete = defaultIfNull(post.getSpec().getDeleted(), false);
+                var expectPublish = defaultIfNull(post.getSpec().getPublish(), false);
+
+                if (expectDelete || !expectPublish) {
+                    unPublishPost(post, events);
+                } else {
+                    publishPost(post, events);
+                }
+
+                labels.put(Post.DELETED_LABEL, expectDelete.toString());
+
+                var expectVisible = defaultIfNull(post.getSpec().getVisible(), VisibleEnum.PUBLIC);
+                var oldVisible = VisibleEnum.from(labels.get(Post.VISIBLE_LABEL));
+                if (!Objects.equals(oldVisible, expectVisible)) {
+                    eventPublisher.publishEvent(
+                        new PostVisibleChangedEvent(request.name(), oldVisible, expectVisible));
+                }
+                labels.put(Post.VISIBLE_LABEL, expectVisible.toString());
+
+                var ownerName = post.getSpec().getOwner();
+                if (StringUtils.isNotBlank(ownerName)) {
+                    labels.put(Post.OWNER_LABEL, ownerName);
+                }
+
+                var publishTime = post.getSpec().getPublishTime();
+                if (publishTime != null) {
+                    labels.put(Post.ARCHIVE_YEAR_LABEL, BlogUtils.getYearText(publishTime));
+                    labels.put(Post.ARCHIVE_MONTH_LABEL, BlogUtils.getMonthText(publishTime));
+                    labels.put(Post.ARCHIVE_DAY_LABEL, BlogUtils.getDayText(publishTime));
+                }
+
+                var permalinkPattern = postPermalinkPolicy.pattern();
+                annotations.put(Constant.PERMALINK_PATTERN_ANNO, permalinkPattern);
+
+                status.setPermalink(postPermalinkPolicy.permalink(post));
+                if (status.getPhase() == null) {
+                    status.setPhase(PostPhase.DRAFT.toString());
+                }
+
+                var excerpt = post.getSpec().getExcerpt();
+                if (excerpt == null) {
+                    excerpt = new Post.Excerpt();
+                }
+                var isAutoGenerate = defaultIfNull(excerpt.getAutoGenerate(), true);
+                if (isAutoGenerate) {
+                    Optional<ContentWrapper> contentWrapper =
+                        postService.getContent(post.getSpec().getReleaseSnapshot(),
+                                post.getSpec().getBaseSnapshot())
+                            .blockOptional();
+                    if (contentWrapper.isPresent()) {
+                        String contentRevised = contentWrapper.get().getContent();
+                        status.setExcerpt(getExcerpt(contentRevised));
+                    }
+                } else {
+                    status.setExcerpt(excerpt.getRaw());
+                }
+
+
+                var ref = Ref.of(post);
+                // handle contributors
+                var headSnapshot = post.getSpec().getHeadSnapshot();
+                var contributors = listSnapshots(ref)
+                    .stream()
+                    .map(snapshot -> {
+                        Set<String> usernames = snapshot.getSpec().getContributors();
+                        return Objects.requireNonNullElseGet(usernames,
+                            () -> new HashSet<String>());
+                    })
+                    .flatMap(Set::stream)
+                    .distinct()
+                    .sorted()
+                    .toList();
+                status.setContributors(contributors);
+
+                // update in progress status
+                status.setInProgress(
+                    !StringUtils.equals(headSnapshot, post.getSpec().getReleaseSnapshot()));
+
+                // version + 1 is required to truly equal version
+                // as a version will be incremented after the update
+                status.setObservedVersion(post.getMetadata().getVersion() + 1);
+                client.update(post);
+
+                // fire event after updating post
+                events.forEach(eventPublisher::publishEvent);
+            });
+        return Result.doNotRetry();
+    }
+
+    @Override
+    public Controller setupWith(ControllerBuilder builder) {
+        return builder
+            .extension(new Post())
+            .onAddMatcher(DefaultExtensionMatcher.builder(client, Post.GVK)
+                .fieldSelector(FieldSelector.of(
+                    equal(Post.REQUIRE_SYNC_ON_STARTUP_INDEX_NAME, BooleanUtils.TRUE))
+                )
+                .build()
+            )
+            .build();
+    }
+
+    void subscribeNewCommentNotification(Post post) {
+        var subscriber = new Subscription.Subscriber();
+        subscriber.setName(post.getSpec().getOwner());
+
+        var interestReason = new Subscription.InterestReason();
+        interestReason.setReasonType(NotificationReasonConst.NEW_COMMENT_ON_POST);
+        interestReason.setSubject(Subscription.ReasonSubject.builder()
+            .apiVersion(post.getApiVersion())
+            .kind(post.getKind())
+            .name(post.getMetadata().getName())
+            .build());
+        notificationCenter.subscribe(subscriber, interestReason).block();
+    }
+
+    private void publishPost(Post post, Set<ApplicationEvent> events) {
+        var expectReleaseSnapshot = post.getSpec().getReleaseSnapshot();
+        if (StringUtils.isBlank(expectReleaseSnapshot)) {
+            // Do nothing if release snapshot is not set
+            return;
+        }
+        var annotations = post.getMetadata().getAnnotations();
+        var lastReleaseSnapshot = annotations.get(Post.LAST_RELEASED_SNAPSHOT_ANNO);
+        if (post.isPublished()
+            && Objects.equals(expectReleaseSnapshot, lastReleaseSnapshot)) {
+            // If the release snapshot is not change
+            return;
+        }
+        var status = post.getStatus();
+        // validate the release snapshot
+        var snapshot = client.fetch(Snapshot.class, expectReleaseSnapshot);
+        if (snapshot.isEmpty()) {
+            Condition condition = Condition.builder()
+                .type(PostPhase.FAILED.name())
+                .reason("SnapshotNotFound")
+                .message(
+                    String.format("Snapshot [%s] not found for publish", expectReleaseSnapshot))
+                .status(ConditionStatus.FALSE)
+                .lastTransitionTime(Instant.now())
+                .build();
+            status.getConditionsOrDefault().addAndEvictFIFO(condition);
+            status.setPhase(PostPhase.FAILED.name());
+            return;
+        }
+        annotations.put(Post.LAST_RELEASED_SNAPSHOT_ANNO, expectReleaseSnapshot);
+        status.setPhase(PostPhase.PUBLISHED.toString());
+        var condition = Condition.builder()
+            .type(PostPhase.PUBLISHED.name())
+            .reason("Published")
+            .message("Post published successfully.")
+            .lastTransitionTime(Instant.now())
+            .status(ConditionStatus.TRUE)
+            .build();
+        status.getConditionsOrDefault().addAndEvictFIFO(condition);
+        var labels = post.getMetadata().getLabels();
+        labels.put(Post.PUBLISHED_LABEL, Boolean.TRUE.toString());
+        if (post.getSpec().getPublishTime() == null) {
+            // TODO Set the field in creation hook in the future.
+            post.getSpec().setPublishTime(Instant.now());
+        }
+        status.setLastModifyTime(snapshot.get().getSpec().getLastModifyTime());
+        events.add(new PostPublishedEvent(this, post.getMetadata().getName()));
+    }
+
+    void unPublishPost(Post post, Set<ApplicationEvent> events) {
+        if (!post.isPublished()) {
+            return;
+        }
+        var labels = post.getMetadata().getLabels();
+        labels.put(Post.PUBLISHED_LABEL, Boolean.FALSE.toString());
+        final var status = post.getStatus();
+
+        var condition = new Condition();
+        condition.setType("CancelledPublish");
+        condition.setStatus(ConditionStatus.TRUE);
+        condition.setReason(condition.getType());
+        condition.setMessage("CancelledPublish");
+        condition.setLastTransitionTime(Instant.now());
+        status.getConditionsOrDefault().addAndEvictFIFO(condition);
+
+        status.setPhase(PostPhase.DRAFT.toString());
+
+        events.add(new PostUnpublishedEvent(this, post.getMetadata().getName()));
+    }
+
+    private void cleanUpResources(Post post) {
+        // clean up snapshots
+        final Ref ref = Ref.of(post);
+        listSnapshots(ref).forEach(client::delete);
+
+        // clean up comments
+        commentService.removeBySubject(ref).block();
+
+        // delete counter
+        counterService.deleteByName(MeterUtils.nameOf(Post.class, post.getMetadata().getName()))
+            .block();
+    }
+
+    private String getExcerpt(String htmlContent) {
+        String shortHtmlContent = StringUtils.substring(htmlContent, 0, 500);
+        String text = Jsoup.parse(shortHtmlContent).text();
+        // TODO The default capture 150 words as excerpt
+        return StringUtils.substring(text, 0, 150);
+    }
+
+    List<Snapshot> listSnapshots(Ref ref) {
+        var snapshotListOptions = new ListOptions();
+        snapshotListOptions.setFieldSelector(FieldSelector.of(
+            QueryFactory.equal("spec.subjectRef", Snapshot.toSubjectRefKey(ref))));
+        return client.listAll(Snapshot.class, snapshotListOptions, Sort.unsorted());
+    }
+}

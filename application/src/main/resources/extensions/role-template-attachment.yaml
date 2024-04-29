@@ -1,0 +1,43 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-attachments
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/dependencies: "[ \"role-template-view-attachments\" ]"
+    rbac.authorization.blog.run/module: "Attachments Management"
+    rbac.authorization.blog.run/display-name: "Attachment Manage"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:attachments:manage"]
+rules:
+  - apiGroups: [ "storage.blog.run" ]
+    resources: [ "attachments", "policies", "policytemplates", "groups" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "attachments" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "" ]
+    resources: [ "settings" ]
+    verbs: [ "get" ]
+  - nonResourceURLs: [ "/apis/api.console.blog.run/v1alpha1/attachments/upload" ]
+    verbs: [ "create" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-view-attachments
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/module: "Attachments Management"
+    rbac.authorization.blog.run/display-name: "Attachment View"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:attachments:view"]
+rules:
+  - apiGroups: [ "storage.blog.run" ]
+    resources: [ "attachments", "policies", "policytemplates", "groups" ]
+    verbs: [ "get", "list" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "attachments" ]
+    verbs: [ "get", "list" ]

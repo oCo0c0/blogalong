@@ -1,0 +1,77 @@
+{
+  "name": "@blogalong/components",
+  "version": "2.14.0",
+  "description": "",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/blog-components.iife.js",
+  "module": "./dist/blog-components.es.js",
+  "unpkg": "./dist/blog-components.iife.js",
+  "jsdelivr": "./dist/blog-components.iife.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build",
+    "test:unit": "vitest --environment jsdom --run",
+    "test:unit:watch": "vitest --environment jsdom --watch",
+    "test:unit:ui": "vitest --environment jsdom --watch --ui",
+    "test:unit:coverage": "vitest run --environment jsdom --coverage",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.app.json --composite false",
+    "lint": "eslint ./src --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts",
+    "prettier": "prettier --write './src/**/*.{vue,js,jsx,ts,tsx,css,scss,json,yml,yaml,html}'",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "keywords": [
+    "blog",
+    "blog-components",
+    "blogalong",
+    "@blogalong/components"
+  ],
+  "author": {
+    "name": "@blogalong",
+    "url": "https://github.com/oCo0c0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oCo0c0/blogalong.git",
+    "directory": "ui/packages/components"
+  },
+  "bugs": {
+    "url": "https://github.com/oCo0c0/blogalong/issues"
+  },
+  "homepage": "https://github.com/oCo0c0/blogalong/tree/main/ui/packages/components#readme",
+  "license": "MIT",
+  "devDependencies": {
+    "@iconify-json/ri": "^1.1.15",
+    "@storybook/addon-essentials": "^7.6.3",
+    "@storybook/addon-interactions": "^7.6.3",
+    "@storybook/addon-links": "^7.6.3",
+    "@storybook/addon-styling": "^1.3.7",
+    "@storybook/blocks": "^7.6.3",
+    "@storybook/testing-library": "^0.0.14-next.2",
+    "@storybook/vue3": "^7.6.3",
+    "@storybook/vue3-vite": "^7.6.3",
+    "eslint-plugin-storybook": "^0.6.15",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "storybook": "^7.6.3",
+    "unplugin-icons": "^0.14.15",
+    "vite-plugin-dts": "^2.3.0"
+  },
+  "peerDependencies": {
+    "vue": "^3.4.19",
+    "vue-router": "^4.2.5"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/blog-components.es.js"
+    },
+    "./dist/style.css": "./dist/style.css"
+  },
+  "dependencies": {
+    "floating-vue": "2.0.0-beta.24"
+  }
+}

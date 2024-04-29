@@ -1,0 +1,32 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-permissions
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/dependencies: "[ \"role-template-view-permissions\" ]"
+    rbac.authorization.blog.run/module: "Permissions Management"
+    rbac.authorization.blog.run/display-name: "Permissions Manage"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:permissions:manage"]
+rules:
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "users/permissions" ]
+    verbs: [ "create", "patch", "update", "delete", "deletecollection" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-view-permissions
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/module: "Permissions Management"
+    rbac.authorization.blog.run/display-name: "Permissions View"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:permissions:view"]
+rules:
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "users/permissions" ]
+    verbs: [ "get", "list" ]

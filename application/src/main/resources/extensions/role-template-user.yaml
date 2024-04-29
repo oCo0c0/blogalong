@@ -1,0 +1,54 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-users
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/dependencies: |
+      [ "role-template-view-users", "role-template-change-password" ]
+    rbac.authorization.blog.run/module: "Users Management"
+    rbac.authorization.blog.run/display-name: "User manage"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:users:manage"]
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "users" ]
+    verbs: [ "create", "patch", "update", "delete", "deletecollection" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "users", "users/permissions", "users/password", "users/avatar" ]
+    verbs: [ "*" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-view-users
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/module: "Users Management"
+    rbac.authorization.blog.run/display-name: "User View"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:users:view"]
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "users" ]
+    verbs: [ "get", "list" ]
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "users" ]
+    verbs: [ "get", "list" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-change-password
+  labels:
+    blog.run/role-template: "true"
+    blog.run/hidden: "true"
+  annotations:
+    rbac.authorization.blog.run/module: "Users Management"
+    rbac.authorization.blog.run/display-name: "User Password Change"
+rules:
+  - apiGroups: [ "api.console.blog.run" ]
+    resources: [ "users/password" ]
+    verbs: [ "update" ]

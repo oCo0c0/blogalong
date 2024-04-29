@@ -1,0 +1,14 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-actuator
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/module: "Actuator Management"
+    rbac.authorization.blog.run/display-name: "Actuator Manage"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:actuator:manage"]
+rules:
+  - nonResourceURLs: [ "actuator", "/actuator/*" ]
+    verbs: [ "get" ]

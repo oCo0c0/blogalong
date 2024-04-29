@@ -1,0 +1,32 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-manage-configmaps
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/dependencies: "[ \"role-template-view-configmaps\" ]"
+    rbac.authorization.blog.run/module: "ConfigMaps Management"
+    rbac.authorization.blog.run/display-name: "ConfigMap Manage"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:configmaps:manage"]
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "configmaps" ]
+    verbs: [ "create", "patch", "update", "delete", "deletecollection" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-view-configmaps
+  labels:
+    blog.run/role-template: "true"
+  annotations:
+    rbac.authorization.blog.run/module: "ConfigMaps Management"
+    rbac.authorization.blog.run/display-name: "ConfigMap View"
+    rbac.authorization.blog.run/ui-permissions: |
+      ["system:configmaps:view"]
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "configmaps" ]
+    verbs: [ "get", "list" ]
