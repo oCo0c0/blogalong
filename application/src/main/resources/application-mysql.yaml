@@ -1,6 +1,6 @@
 spring:
   r2dbc:
-    url: r2dbc:pool:mysql://3.tcp.vip.cpolar.cn:12272/blogalong_dev
+    url: r2dbc:pool:mysql://1.tcp.cpolar.io:10740/blogalong_dev
     username: along
     password: 010701kk
   sql:
